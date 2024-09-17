@@ -169,7 +169,7 @@ class Policy(Base):
     def read_all_url_lists(self):
         return self.read("policy/urllist")
 
-    def read_url_list_by_id(self, id):
+    def read_url_list(self, id):
         return self.read(f"policy/urllist/{id}")
 
     def update_url_list(self, id, action, data=None):
