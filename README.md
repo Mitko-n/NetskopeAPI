@@ -1,17 +1,10 @@
-
 # Netskope API Client
 
-This repository contains a Python client for interacting with the Netskope API. It includes a base class `NetskopeAPIBase` for making HTTP requests and two subclasses `Policy` and `Scim` for specific API functionalities related to policies and SCIM operations, respectively.
-
-## Overview
-
-- **`NetskopeAPIBase`**: The base class for making HTTP requests with automatic retry handling and consistent response structures.
-- **`Policy`**: Provides methods for interacting with Netskope policy endpoints.
-- **`Scim`**: Provides methods for interacting with SCIM endpoints related to users and groups.
+This repository contains a Python client for interacting with Netskope's API. It includes two main classes, `Policy` and `Scim`, for handling different types of API interactions.
 
 ## Installation
 
-Ensure you have the `requests` library installed:
+Make sure you have `requests` library installed. You can install it using pip if you don't have it already:
 
 ```bash
 pip install requests
@@ -19,138 +12,329 @@ pip install requests
 
 ## Usage
 
-### NetskopeAPIBase
+### Initialization
 
-The `NetskopeAPIBase` class provides a unified way to perform HTTP requests. It automatically handles retries for failed requests and provides a consistent response structure.
-
-#### Example
+You need to load your API credentials from a JSON file and initialize the `Policy` or `Scim` client with the base URL and authentication token.
 
 ```python
-from nsk_client import NetskopeAPIBase, Policy, Scim
+import json
+from NetskopeAPI import Policy, Scim
 
-# Initialize NetskopeAPIBase
-base_url = "https://api.example.com"
-headers = {"Authorization": "Bearer YOUR_API_TOKEN"}
-
-client = NetskopeAPIBase(base_url, headers=headers)
-
-# Perform a GET request
-response = client.get("some/endpoint")
-print(response)
-
-# Close the session when done
-client.close()
+# Define constants for tenant, base URL, and authentication token
+TENANT = "TENANT"
+BASE_URL = f"https://{TENANT}.goskope.com/api/v2"
+AUTH_TOKEN = "AUTH_TOKEN"
 ```
 
-### Policy
+### Policy Class
 
-The `Policy` class extends `NetskopeAPIBase` and provides methods for managing policy-related resources.
+The `Policy` class handles operations related to policies in the Netskope API.\
 
-#### Example
+**THIS IS BAD EXAMPLES HAVE TO CHECK THEY DO NOT WORK**
+
+#### Creating an instance
 
 ```python
-from nsk_client import Policy
+from NetskopeAPI import Policy
 
-# Initialize Policy client
-policy_client = Policy(base_url, auth_token="YOUR_API_TOKEN")
+policy_client = Policy(base_url=BASE_URL, auth_token=AUTH_TOKEN)
+```
 
-# Get all domain fronting exceptions
-response = policy_client.get_domain_fronting_exceptions()
-print(response)
+#### Example 1: Create a Domain Fronting Exception
 
-# Create a new domain fronting exception
-data = {"some": "data"}
+```python
+data = {
+    "name": "example.com",
+    "description": "Example domain",
+}
 response = policy_client.create_domain_fronting_exception(data)
-print(response)
-
-# Delete a domain fronting exception by ID
-response = policy_client.delete_domain_fronting_exception_by_id(id="12345")
-print(response)
+print("Create Domain Fronting Exception Response:")
+print(json.dumps(response, indent=4))
 ```
 
-### Scim
-
-The `Scim` class extends `NetskopeAPIBase` and provides methods for managing SCIM resources such as users and groups.
-
-#### Example
+#### Example 2: Read All Domain Fronting Exceptions
 
 ```python
-from nsk_client import Scim
-
-# Initialize Scim client
-scim_client = Scim(base_url, auth_token="YOUR_API_TOKEN")
-
-# Get a list of users
-response = scim_client.get_users()
-print(response)
-
-# Create a new user
-user_data = {"name": "John Doe", "email": "john.doe@example.com"}
-response = scim_client.create_user(user_data)
-print(response)
-
-# Delete a user by ID
-response = scim_client.delete_user(id_value="12345")
-print(response)
+response = policy_client.read_domain_fronting_exceptions()
+print("All Domain Fronting Exceptions:")
+print(json.dumps(response, indent=4))
 ```
 
-## Methods
+#### Example 3: Read a Domain Fronting Exception by ID
 
-### `NetskopeAPIBase`
-
-- **`get(endpoint, params=None, headers=None, display_output=False)`**: Perform a GET request.
-- **`post(endpoint, data=None, headers=None, files=None, display_output=False)`**: Perform a POST request.
-- **`put(endpoint, data=None, headers=None, display_output=False)`**: Perform a PUT request.
-- **`delete(endpoint, display_output=False)`**: Perform a DELETE request.
-- **`patch(endpoint, data=None, headers=None, display_output=False)`**: Perform a PATCH request.
-- **`close()`**: Close the session.
-
-### `Policy`
-
-- **`get_domain_fronting_exceptions(display_output=False)`**
-- **`get_domain_fronting_exception_by_id(id, display_output=False)`**
-- **`create_domain_fronting_exception(data, display_output=False)`**
-- **`update_domain_fronting_exception(id, data, display_output=False)`**
-- **`delete_domain_fronting_exception_by_id(id, display_output=False)`**
-- **`get_npa_policies(display_output=False)`**
-- **`get_npa_policy(id, display_output=False)`**
-- **`create_npa_policy(data, display_output=False)`**
-- **`patch_npa_policy(id, data, display_output=False)`**
-- **`delete_npa_policy(id, display_output=False)`**
-- **`get_all_url_lists(display_output=False)`**
-- **`get_url_list_by_id(id, display_output=False)`**
-- **`create_url_list(data, display_output=False)`**
-- **`upload_url_list_config(file_path, display_output=False)`**
-- **`patch_url_list(id, action, data=None, display_output=False)`**
-- **`replace_url_list(id, data, display_output=False)`**
-- **`delete_url_list(id, display_output=False)`**
-- **`apply_pending_url_changes(display_output=False)`**
-
-### `Scim`
-
-- **`get_users(display_output=False)`**
-- **`get_user(id_value, display_output=False)`**
-- **`create_user(data, display_output=False)`**
-- **`replace_user(id_value, data, display_output=False)`**
-- **`update_user(id_value, data, display_output=False)`**
-- **`delete_user(id_value, display_output=False)`**
-- **`get_groups(display_output=False)`**
-- **`get_group(id_value, display_output=False)`**
-- **`create_group(data, display_output=False)`**
-- **`replace_group(id_value, data, display_output=False)`**
-- **`update_group(id_value, data, display_output=False)`**
-- **`delete_group(id_value, display_output=False)`**
-- **`get_resource_types(display_output=False)`**
-- **`get_resource_type(id_value, display_output=False)`**
-- **`get_schemas(display_output=False)`**
-
-## Contributing
-
-Feel free to submit issues or pull requests. Contributions are welcome!
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```python
+exception_id = "example-id"
+response = policy_client.read_domain_fronting_exception_by_id(exception_id)
+print(f"Domain Fronting Exception {exception_id} Details:")
+print(json.dumps(response, indent=4))
 ```
 
-Replace `"YOUR_API_TOKEN"` and `"https://api.example.com"` with your actual values as needed. Adjust the `import` statements based on your module structure.
+#### Example 4: Update a Domain Fronting Exception
+
+```python
+exception_id = "example-id"
+data = {
+    "description": "Updated description for domain",
+}
+response = policy_client.update_domain_fronting_exception(exception_id, data)
+print(f"Update Domain Fronting Exception {exception_id} Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 5: Delete a Domain Fronting Exception by ID
+
+```python
+exception_id = "example-id"
+response = policy_client.delete_domain_fronting_exception_by_id(exception_id)
+print(f"Delete Domain Fronting Exception {exception_id} Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 6: Create an NPA Policy
+
+```python
+data = {
+    "name": "Example NPA Policy",
+    "rules": [
+        # NPA policy rules here
+    ],
+}
+response = policy_client.create_npa_policy(data)
+print("Create NPA Policy Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 7: Read All NPA Policies
+
+```python
+response = policy_client.read_npa_policies()
+print("All NPA Policies:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 8: Read a Specific NPA Policy
+
+```python
+npa_policy_id = "example-id"
+response = policy_client.read_npa_policy(npa_policy_id)
+print(f"NPA Policy {npa_policy_id} Details:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 9: Update an NPA Policy
+
+```python
+npa_policy_id = "example-id"
+data = {
+    "rules": [
+        # Updated NPA policy rules here
+    ],
+}
+response = policy_client.update_npa_policy(npa_policy_id, data)
+print(f"Update NPA Policy {npa_policy_id} Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 10: Delete an NPA Policy
+
+```python
+npa_policy_id = "example-id"
+response = policy_client.delete_npa_policy(npa_policy_id)
+print(f"Delete NPA Policy {npa_policy_id} Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 11: Create a URL List
+
+```python
+data = {
+    "name": "Example URL List",
+    "urls": [
+        "http://example.com",
+    ],
+}
+response = policy_client.create_url_list(data)
+print("Create URL List Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 12: Read All URL Lists
+
+```python
+response = policy_client.read_all_url_lists()
+print("All URL Lists:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 13: Read a URL List by ID
+
+```python
+url_list_id = "example-id"
+response = policy_client.read_url_list_by_id(url_list_id)
+print(f"URL List {url_list_id} Details:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 14: Update a URL List
+
+```python
+url_list_id = "example-id"
+data = {
+    "urls": [
+        "http://updated-example.com",
+    ],
+}
+response = policy_client.update_url_list(url_list_id, "update", data)
+print(f"Update URL List {url_list_id} Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 15: Delete a URL List
+
+```python
+url_list_id = "example-id"
+response = policy_client.delete_url_list(url_list_id)
+print(f"Delete URL List {url_list_id} Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 16: Replace a URL List
+
+```python
+url_list_id = "example-id"
+data = {
+    "name": "Replaced URL List",
+    "urls": [
+        "http://replaced-example.com",
+    ],
+}
+response = policy_client.replace_url_list(url_list_id, data)
+print(f"Replace URL List {url_list_id} Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 17: Upload a URL List Configuration
+
+```python
+file_path = "./path/to/url_list_config.json"
+response = policy_client.upload_url_list_config(file_path)
+print("Upload URL List Configuration Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 18: Apply Pending URL Changes
+
+```python
+response = policy_client.apply_pending_url_changes()
+print("Apply Pending URL Changes Response:")
+print(json.dumps(response, indent=4))
+```
+
+### Scim Class
+
+The `Scim` class handles operations related to users and groups in the Netskope API.
+
+#### Creating an instance
+
+```python
+from NetskopeAPI import Scim
+
+scim_client = Scim(base_url=BASE_URL, auth_token=AUTH_TOKEN)
+```
+
+#### Example 1: Create a New User
+
+```python
+new_user_data = {
+    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+    "userName": "netskope.test.new@outlook.com",
+    "name": {
+        "familyName": "Netskope",
+        "givenName": "Test",
+    },
+    "active": True,
+    "emails": [
+        {
+            "value": "netskope.test.new@outlook.com",
+            "primary": True,
+        }
+    ],
+}
+response = scim_client.create_user(data=new_user_data)
+print("Create User Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 2: Read All Users
+
+```python
+response = scim_client.read_users()
+print("Read Users Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 3: Read a Specific User
+
+```python
+user_id = response["data"][0]["id"]
+response = scim_client.read_user(user_id)
+print(f"Read User {user_id} Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 4: Update a User
+
+```python
+updated_user_data = {
+    "Operations": [
+        {
+            "op": "add",
+            "path": "userName",
+            "value": "new_upn"
+        }
+    ],
+    "schemas": [
+        "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+    ]
+}
+response = scim_client.update_user(user_id, data=updated_user_data)
+print(f"Update User {user_id} Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 5: Delete a User
+
+```python
+response = scim_client.delete_user(user_id)
+print(f"Delete User {user_id} Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 6: Create a New Group
+
+```python
+new_group_data = {
+    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+    "displayName": "Test Group",
+}
+response = scim_client.create_group(data=new_group_data)
+print("Create Group Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 7: Read All Groups
+
+```python
+response = scim_client.read_groups()
+print("Read Groups Response:")
+print(json.dumps(response, indent=4))
+```
+
+#### Example 8: Read a Specific Group
+
+```python
+group_id = response["data"][0]["id"]
+response = scim_client.read_group(group_id)
+print(f"Read Group {group_id} Response:")
+print(json.dumps(response, indent=4
+```
