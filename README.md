@@ -1,4 +1,3 @@
-Here’s the updated `README.md` with `NskBase` renamed to `NetskopeAPIBase`:
 
 # Netskope API Client
 
