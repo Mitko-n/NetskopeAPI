@@ -25,7 +25,7 @@ class Base:
         self._session.mount("https://", adapter)
         self._session.mount("http://", adapter)
 
-    def _request(self, method, endpoint, headers=None, display_output=False, **kwargs):
+    def _request(self, method, endpoint, headers=None, **kwargs):
         """Unified request method with consistent output structure."""
         status_messages = {
             200: "Request successful",
@@ -40,6 +40,7 @@ class Base:
             413: "Payload too large. The request body exceeds the server's size limit.",
             414: "URI too long. The requested URI exceeds the server's length limit.",
             429: "Too many requests. Please slow down and try again later.",
+            409: "Conflict. There was a conflict with the request, such as a resource already existing.",
         }
 
         try:
@@ -53,9 +54,6 @@ class Base:
                 else:
                     try:
                         json_response = response.json()
-                        if display_output:
-                            print(f"\n{GREEN_DOT} Control Print: \n", json.dumps(json_response, indent=4))
-
                         return {"status": "success" if status_code == 200 else "error", "message": status_messages.get(status_code, "Operation successful."), "data": json_response}
                     except ValueError:
                         return {
@@ -67,12 +65,24 @@ class Base:
             if 400 <= status_code < 500:
                 try:
                     json_response = response.json()
-                    return {"status": "error", "message": json_response.get("detail", status_messages.get(status_code, "Client error occurred.")), "data": json_response}
+                    return {
+                        "status": "error",
+                        "message": json_response.get("detail", status_messages.get(status_code, "Client error occurred.")),
+                        "data": {
+                            "details": json_response.get("detail", "Client error occurred."),
+                            "schemas": json_response.get("schemas", []),
+                            "status": status_code
+                        }
+                    }
                 except ValueError:
                     return {
                         "status": "error",
                         "message": status_messages.get(status_code, "Client error occurred."),
-                        "data": response.content.decode("utf-8"),
+                        "data": {
+                            "details": response.content.decode("utf-8"),
+                            "schemas": [],
+                            "status": status_code
+                        }
                     }
 
             return {
@@ -88,20 +98,20 @@ class Base:
         except Exception as e:
             return {"status": "error", "message": f"An unexpected error occurred: {str(e)}", "data": None}
 
-    def get(self, endpoint, params=None, headers=None, display_output=False):
-        return self._request("GET", endpoint, headers=headers, params=params, display_output=display_output)
+    def get(self, endpoint, params=None, headers=None):
+        return self._request("GET", endpoint, headers=headers, params=params)
 
-    def post(self, endpoint, data=None, headers=None, files=None, display_output=False):
-        return self._request("POST", endpoint, headers=headers, json=data, files=files, display_output=display_output)
+    def post(self, endpoint, data=None, headers=None, files=None):
+        return self._request("POST", endpoint, headers=headers, json=data, files=files)
 
-    def put(self, endpoint, data=None, headers=None, display_output=False):
-        return self._request("PUT", endpoint, headers=headers, json=data, display_output=display_output)
+    def put(self, endpoint, data=None, headers=None):
+        return self._request("PUT", endpoint, headers=headers, json=data)
 
-    def delete(self, endpoint, display_output=False):
-        return self._request("DELETE", endpoint, display_output=display_output)
+    def delete(self, endpoint):
+        return self._request("DELETE", endpoint)
 
-    def patch(self, endpoint, data=None, headers=None, display_output=False):
-        return self._request("PATCH", endpoint, headers=headers, json=data, display_output=display_output)
+    def patch(self, endpoint, data=None, headers=None):
+        return self._request("PATCH", endpoint, headers=headers, json=data)
 
     def close(self):
         """Close the session."""
@@ -118,7 +128,6 @@ class Base:
 
 # Policy Class
 
-
 class Policy(Base):
     def __init__(self, base_url, auth_token, headers=None):
         super().__init__(base_url, headers)
@@ -126,68 +135,67 @@ class Policy(Base):
 
     # DOMAIN
 
-    def get_domain_fronting_exceptions(self, display_output=False):
-        return self.get("policy/domainfrontings", display_output=display_output)
+    def get_domain_fronting_exceptions(self):
+        return self.get("policy/domainfrontings")
 
-    def get_domain_fronting_exception_by_id(self, id, display_output=False):
-        return self.get(f"policy/domainfrontings/{id}", display_output=display_output)
+    def get_domain_fronting_exception_by_id(self, id):
+        return self.get(f"policy/domainfrontings/{id}")
 
-    def create_domain_fronting_exception(self, data, display_output=False):
-        return self.post("policy/domainfrontings", data=data, display_output=display_output)
+    def create_domain_fronting_exception(self, data):
+        return self.post("policy/domainfrontings", data=data)
 
-    def update_domain_fronting_exception(self, id, data, display_output=False):
-        return self.patch(f"policy/domainfrontings/{id}", data=data, display_output=display_output)
+    def update_domain_fronting_exception(self, id, data):
+        return self.patch(f"policy/domainfrontings/{id}", data=data)
 
-    def delete_domain_fronting_exception_by_id(self, id, display_output=False):
-        return self.delete(f"policy/domainfrontings/{id}", display_output=display_output)
+    def delete_domain_fronting_exception_by_id(self, id):
+        return self.delete(f"policy/domainfrontings/{id}")
 
     # NPA
 
-    def get_npa_policies(self, display_output=False):
-        return self.get("policy/npa/rules", display_output=display_output)
+    def get_npa_policies(self):
+        return self.get("policy/npa/rules")
 
-    def get_npa_policy(self, id, display_output=False):
-        return self.get(f"policy/npa/rules/{id}", display_output=display_output)
+    def get_npa_policy(self, id):
+        return self.get(f"policy/npa/rules/{id}")
 
-    def create_npa_policy(self, data, display_output=False):
-        return self.post("policy/npa/rules", data=data, display_output=display_output)
+    def create_npa_policy(self, data):
+        return self.post("policy/npa/rules", data=data)
 
-    def patch_npa_policy(self, id, data, display_output=False):
-        return self.patch(f"policy/npa/rules/{id}", data=data, display_output=display_output)
+    def patch_npa_policy(self, id, data):
+        return self.patch(f"policy/npa/rules/{id}", data=data)
 
-    def delete_npa_policy(self, id, display_output=False):
-        return self.delete(f"policy/npa/rules/{id}", display_output=display_output)
+    def delete_npa_policy(self, id):
+        return self.delete(f"policy/npa/rules/{id}")
 
     # URL
 
-    def get_all_url_lists(self, display_output=False):
-        return self.get("policy/urllist", display_output=display_output)
+    def get_all_url_lists(self):
+        return self.get("policy/urllist")
 
-    def get_url_list_by_id(self, id, display_output=False):
-        return self.get(f"policy/urllist/{id}", display_output=display_output)
+    def get_url_list_by_id(self, id):
+        return self.get(f"policy/urllist/{id}")
 
-    def create_url_list(self, data, display_output=False):
-        return self.post("policy/urllist", data=data, display_output=display_output)
+    def create_url_list(self, data):
+        return self.post("policy/urllist", data=data)
 
-    def upload_url_list_config(self, file_path, display_output=False):
+    def upload_url_list_config(self, file_path):
         with open(file_path, "rb") as file:
-            return self.post("policy/urllist/file", files={"file": file}, display_output=display_output)
+            return self.post("policy/urllist/file", files={"file": file})
 
-    def patch_url_list(self, id, action, data=None, display_output=False):
-        return self.patch(f"policy/urllist/{id}/{action}", data=data, display_output=display_output)
+    def patch_url_list(self, id, action, data=None):
+        return self.patch(f"policy/urllist/{id}/{action}", data=data)
 
-    def replace_url_list(self, id, data, display_output=False):
-        return self.put(f"policy/urllist/{id}", data=data, display_output=display_output)
+    def replace_url_list(self, id, data):
+        return self.put(f"policy/urllist/{id}", data=data)
 
-    def delete_url_list(self, id, display_output=False):
-        return self.delete(f"policy/urllist/{id}", display_output=display_output)
+    def delete_url_list(self, id):
+        return self.delete(f"policy/urllist/{id}")
 
-    def apply_pending_url_changes(self, display_output=False):
-        return self.post("policy/urllist/deploy", display_output=display_output)
+    def apply_pending_url_changes(self):
+        return self.post("policy/urllist/deploy")
 
 
 # Scim Class
-
 
 class Scim(Base):
     def __init__(self, base_url, auth_token, headers=None):
@@ -196,51 +204,37 @@ class Scim(Base):
 
     # USER/S
 
-    def get_users(self, display_output=False):
-        return self.get("scim/Users", display_output=display_output)
+    def get_users(self):
+        return self.get("scim/Users")
 
-    def get_user(self, id_value, display_output=False):
-        return self.get(f"scim/Users/{id_value}", display_output=display_output)
+    def get_user(self, id_value):
+        return self.get(f"scim/Users/{id_value}")
 
-    def create_user(self, data, display_output=False):
-        return self.post("scim/Users", data=data, display_output=display_output)
+    def create_user(self, data):
+        return self.post("scim/Users", data=data)
 
-    def replace_user(self, id_value, data, display_output=False):
-        return self.put(f"scim/Users/{id_value}", data=data, display_output=display_output)
+    def replace_user(self, id_value, data):
+        return self.put(f"scim/Users/{id_value}", data=data)
 
-    def update_user(self, id_value, data, display_output=False):
-        return self.patch(f"scim/Users/{id_value}", data=data, display_output=display_output)
+    def update_user(self, id_value, data):
+        return self.patch(f"scim/Users/{id_value}", data=data)
 
-    def delete_user(self, id_value, display_output=False):
-        return self.delete(f"scim/Users/{id_value}", display_output=display_output)
+    def delete_user(self, id_value):
+        return self.delete(f"scim/Users/{id_value}")
 
     # GROUP/S
 
-    def get_groups(self, display_output=False):
-        return self.get("scim/Groups", display_output=display_output)
+    def get_groups(self):
+        return self.get("scim/Groups")
 
-    def get_group(self, id_value, display_output=False):
-        return self.get(f"scim/Groups/{id_value}", display_output=display_output)
+    def get_group(self, id_value):
+        return self.get(f"scim/Groups/{id_value}")
 
-    def create_group(self, data, display_output=False):
-        return self.post("scim/Groups", data=data, display_output=display_output)
+    def create_group(self, data):
+        return self.post("scim/Groups", data=data)
 
-    def replace_group(self, id_value, data, display_output=False):
-        return self.put(f"scim/Groups/{id_value}", data=data, display_output=display_output)
+    def replace_group(self, id_value, data):
+        return self.put(f"scim/Groups/{id_value}", data=data)
 
-    def update_group(self, id_value, data, display_output=False):
-        return self.patch(f"scim/Groups/{id_value}", data=data, display_output=display_output)
-
-    def delete_group(self, id_value, display_output=False):
-        return self.delete(f"scim/Groups/{id_value}", display_output=display_output)
-
-    # Additional test does not work or need access rights
-
-    def get_resource_types(self, display_output=False):
-        return self.get(f"scim/ResourceTypes", display_output=display_output)
-
-    def get_resource_type(self, id_value, display_output=False):
-        return self.get(f"scim/ResourceTypes/{id_value}", display_output=display_output)
-
-    def get_schemas(self, display_output=False):
-        return self.get(f"scim/Schemas", display_output=display_output)
+    def update_group(self, id_value, data):
+        return self.patch(f"scim/Groups/{id_value}", data=data)
