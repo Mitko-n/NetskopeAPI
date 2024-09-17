@@ -7,11 +7,11 @@ RED_DOT = "🔴"
 GREEN_DOT = "🟢"
 
 
-class NetskopeAPIBase:
+class Base:
     def __init__(self, base_url, headers=None, retries=5, backoff_factor=2):
-        self.base_url = base_url
-        self.headers = headers or {}
-        self.session = requests.Session()
+        self._base_url = base_url
+        self._headers = headers or {}
+        self._session = requests.Session()
 
         # Configure retry strategy
         retry_strategy = Retry(
@@ -22,15 +22,15 @@ class NetskopeAPIBase:
             raise_on_status=False,
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
-        self.session.mount("https://", adapter)
-        self.session.mount("http://", adapter)
+        self._session.mount("https://", adapter)
+        self._session.mount("http://", adapter)
 
     def _request(self, method, endpoint, headers=None, display_output=False, **kwargs):
         """Unified request method with consistent output structure."""
         status_messages = {
             200: "Request successful",
             201: "Resource created successfully.",
-            204: "Empty response, successfully deleted the resource.",
+            204: "No content, action completed successfully.",
             400: "Bad request. Please check your input parameters.",
             401: "Unauthorized. Please check your authentication credentials.",
             403: "Forbidden. You don't have permission to access this resource.",
@@ -43,8 +43,8 @@ class NetskopeAPIBase:
         }
 
         try:
-            headers = headers or self.headers
-            response = self.session.request(method, f"{self.base_url}/{endpoint}", headers=headers, **kwargs)
+            headers = headers or self._headers
+            response = self._session.request(method, f"{self._base_url}/{endpoint}", headers=headers, **kwargs)
             status_code = response.status_code
 
             if status_code in status_messages:
@@ -52,39 +52,33 @@ class NetskopeAPIBase:
                     return {"status": "success", "message": status_messages[status_code], "data": None}
                 else:
                     try:
-                        # Try to parse JSON response
                         json_response = response.json()
                         if display_output:
                             print(f"\n{GREEN_DOT} Control Print: \n", json.dumps(json_response, indent=4))
 
                         return {"status": "success" if status_code == 200 else "error", "message": status_messages.get(status_code, "Operation successful."), "data": json_response}
                     except ValueError:
-                        # If JSON parsing fails, treat the response as raw content
                         return {
                             "status": "error",
                             "message": "Response is not in JSON format.",
-                            "data": response.content.decode("utf-8"),  # Decode bytes to string for better readability
+                            "data": response.content.decode("utf-8"),
                         }
 
-            # Handle 4xx status codes as errors
             if 400 <= status_code < 500:
                 try:
-                    # Attempt to parse JSON error response
                     json_response = response.json()
                     return {"status": "error", "message": json_response.get("detail", status_messages.get(status_code, "Client error occurred.")), "data": json_response}
                 except ValueError:
-                    # If JSON parsing fails, treat the response as raw content
                     return {
                         "status": "error",
                         "message": status_messages.get(status_code, "Client error occurred."),
-                        "data": response.content.decode("utf-8"),  # Decode bytes to string for better readability
+                        "data": response.content.decode("utf-8"),
                     }
 
-            # Handle unexpected status codes
             return {
                 "status": "error",
                 "message": f"Unexpected response format (status code: {status_code}).",
-                "data": response.content.decode("utf-8"),  # Decode bytes to string for better readability
+                "data": response.content.decode("utf-8"),
             }
 
         except requests.HTTPError as http_err:
@@ -111,9 +105,9 @@ class NetskopeAPIBase:
 
     def close(self):
         """Close the session."""
-        if self.session:
-            self.session.close()
-            self.session = None
+        if self._session:
+            self._session.close()
+            self._session = None
 
     def __enter__(self):
         return self
@@ -125,11 +119,10 @@ class NetskopeAPIBase:
 # Policy Class
 
 
-class Policy(NetskopeAPIBase):
-
+class Policy(Base):
     def __init__(self, base_url, auth_token, headers=None):
         super().__init__(base_url, headers)
-        self.headers.update({"Netskope-Api-Token": auth_token, "accept": "application/json"})
+        self._headers.update({"Netskope-Api-Token": auth_token, "accept": "application/json"})
 
     # DOMAIN
 
@@ -196,10 +189,10 @@ class Policy(NetskopeAPIBase):
 # Scim Class
 
 
-class Scim(NetskopeAPIBase):
+class Scim(Base):
     def __init__(self, base_url, auth_token, headers=None):
         super().__init__(base_url, headers)
-        self.headers.update({"Netskope-Api-Token": auth_token, "Accept": "application/json"})
+        self._headers.update({"Netskope-Api-Token": auth_token, "Accept": "application/json"})
 
     # USER/S
 
